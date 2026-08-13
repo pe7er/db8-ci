@@ -40,11 +40,11 @@ git init && git add -A && git commit -m "Import from live"
 gh repo create pe7er/db8access --private --source=. --push
 ```
 
-`db8-ci` must be **readable by the package repos**. Within one account a private
-reusable workflow works if you enable it under
-*Settings → Actions → General → Access* in the `db8-ci` repo. If that proves
-awkward, making `db8-ci` public is harmless — it contains no source, only build
-steps.
+The nine package repos are private. `db8-ci` is **public**, which is what lets
+them call its reusable workflow with no extra configuration — a private
+reusable workflow would need *Settings → Actions → General → Access* opened up
+in `db8-ci` first. It holds no extension source, only build steps and setup
+notes.
 
 ### 2. Create one update stream per package
 
