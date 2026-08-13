@@ -48,31 +48,78 @@ steps.
 
 ### 2. Create one update stream per package
 
-In **com_db8updates → Streams** on extensions.db8.nl, add a stream per package:
+Run `streams.sql` against extensions.db8.nl, or add them by hand in
+**com_db8updates → Streams**:
 
 | Field | Value |
 |---|---|
-| Element | `pkg_db8access` (etc.) |
+| Element | `pkg_db8access` (etc.) — must equal `<name>` in the package manifest |
 | Extension type | `package` |
 | Channel | `stable` |
-| Access mode | `public`, `license_key`, `subscription`, or `user_group` |
+| Access mode | `public` |
 
-The element must match `<name>` in the package manifest exactly, or Joomla will
-fetch the feed and ignore it.
+The element match is exact and failure is silent: Joomla fetches the feed,
+finds no matching extension, and reports no update available.
 
-### 3. Point customer sites at the feed
+**Access mode stays `public`, deliberately.** Gating belongs on the download,
+not the feed. A site whose licence has expired must still see that an update
+exists — otherwise it never learns about a security release — while being
+refused the file. A protected stream does the opposite: `UpdateFeedService`
+returns 403 with no update, and channel-wide feeds omit the stream entirely, so
+the customer reads "up to date" when they are not.
 
-The manifest already carries the update server, so a fresh install wires itself
-up:
+The refusal happens downstream. `DownloadAccessService` in com_db8downloads
+checks published state, view level, user groups and the licence token, and
+`LicenseValidator` rejects expired keys.
 
-```xml
-<server type="extension" name="pkg_db8access">https://extensions.db8.nl/?option=com_db8updates&amp;task=update.xml&amp;stream=pkg_db8access&amp;channel=stable</server>
+> For that to work, version rows must set `download_id` linking a
+> com_db8downloads version. `UpdateXmlRenderer::resolveDownloadUrl()` prefers a
+> literal `download_url`, and a literal URL is **not** access-checked.
+
+### 3. Create the /updates menu items
+
+The feed is served through menu items, which is what makes the URLs readable.
+Run `create-update-menu.php` from the Joomla root:
+
+```bash
+php cli/create-update-menu.php
 ```
 
-For a gated stream, the customer's licence key goes in Joomla's **Extra Query**
-field (*System → Update Sites → edit the site*), as `license_key=XYZ`. Joomla
-appends it to both the feed request and the download URL. Never put a key in the
-manifest — it ships to everyone.
+It creates a hidden `updates` menu type, a parent item serving the whole stable
+channel at `/updates`, and one child per stream at `/updates/<package>`. It is
+idempotent and rebuilds the nested set afterwards.
+
+The front-end view reads `stream_id` from **menu parameters only** — a query
+string on a shared menu item is ignored — so every package needs its own item.
+Stream IDs differ per site, which is why this is a script rather than SQL: it
+looks each one up by element.
+
+Requires SEF URLs with rewriting on. Verify:
+
+```bash
+curl -s https://extensions.db8.nl/updates/db8setup | head -3
+```
+
+### 4. Point customer sites at the feed
+
+The manifest carries the update server, so a fresh install wires itself up:
+
+```xml
+<server type="extension" name="pkg_db8access">https://extensions.db8.nl/updates/db8access</server>
+```
+
+That URL answers 200 directly with no redirect, which matters: the updater
+treats any non-200 as failure.
+
+The customer's licence key goes in Joomla's **Extra Query** field
+(*System → Update Sites → edit the site*). Joomla appends it to both the feed
+request and the download URL. Never put a key in the manifest — it ships to
+everyone.
+
+> The two endpoints currently disagree on the parameter name: the feed reads
+> `license_key`, but com_db8downloads reads `token`. Since streams are public,
+> only the download needs it, so set Extra Query to `token=XYZ`. Accepting both
+> names in `DownloadController` would remove the trap.
 
 ---
 

@@ -1,25 +1,37 @@
 --
 -- One update stream per db8 package, for com_db8updates on extensions.db8.nl.
 --
--- Before running:
---   1. Replace `#__` with the site's table prefix (usually with your SQL client's
---      search-and-replace, or run through: sed 's/`#__/`jos_/' streams.sql).
---   2. Decide `access_mode` — see the note below. This file ships 'public'.
+-- Before running, replace `#__` with the site's table prefix — with your SQL
+-- client's search-and-replace, or: sed 's/`#__/`jos_/' streams.sql
 --
 -- `element` MUST equal <name> in the package manifest exactly. A mismatch is
 -- silent: Joomla fetches the feed, finds no matching extension, and reports no
 -- update available.
 --
--- access_mode options, per UpdateAccessService:
---   public        anyone with the URL gets the feed and the download
---   license_key   requires &license_key=… (customers set it in Joomla's
---                 Update Site "Extra Query" field)
---   subscription  requires an active com_db8access subscription for the
---                 logged-in user
---   user_group    requires membership of a group allowed on the linked download
+-- WHY access_mode IS 'public' AND SHOULD STAY THAT WAY
 --
--- For paid extensions use 'license_key' or 'subscription'. 'public' is
--- appropriate only while nothing paid is published yet, or for free packages.
+-- Gating belongs on the download, not on the feed. A site whose licence has
+-- expired must still SEE that an update exists — otherwise it never learns
+-- about a security release — while being unable to download it.
+--
+-- A protected stream does the opposite. UpdateFeedService returns 403 with no
+-- update for a request that fails the check, and buildForChannel() silently
+-- omits the stream from channel-wide feeds. The customer sees "up to date"
+-- when they are not.
+--
+-- Enforcement already happens downstream: the feed's download URL routes
+-- through com_db8downloads, whose DownloadAccessService checks published
+-- state, view level, user groups and the licence token, and LicenseValidator
+-- rejects expired keys. So a lapsed customer sees the update and is refused
+-- the file — which is the intent.
+--
+-- Requirement: version rows must set download_id (linking a com_db8downloads
+-- version) rather than a literal download_url. UpdateXmlRenderer prefers a
+-- literal URL and a literal URL is NOT access-checked.
+--
+-- The other modes (license_key, subscription, user_group, token) exist for
+-- feeds that genuinely must be invisible — pre-release or customer-specific
+-- channels, not the public stable line.
 --
 -- Re-runnable: existing rows for the same element are left untouched.
 --
@@ -41,7 +53,7 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `#__db8updates_streams` existing WHERE existing.`element` = s.e
 );
 
--- Switch every stream to licence-gated once real packages are published:
--- UPDATE `#__db8updates_streams` SET `access_mode` = 'license_key' WHERE `element` LIKE 'pkg_db8%';
-
 SELECT `id`, `element`, `channel`, `access_mode`, `published` FROM `#__db8updates_streams` ORDER BY `id`;
+
+-- Next: run create-update-menu.php to build the /updates/<package> menu items
+-- that the package manifests point at.
