@@ -66,7 +66,7 @@ The manifest already carries the update server, so a fresh install wires itself
 up:
 
 ```xml
-<server type="extension" name="pkg_db8access">https://extensions.db8.nl/index.php?option=com_db8updates&amp;task=update.xml&amp;stream=pkg_db8access&amp;channel=stable</server>
+<server type="extension" name="pkg_db8access">https://extensions.db8.nl/?option=com_db8updates&amp;task=update.xml&amp;stream=pkg_db8access&amp;channel=stable</server>
 ```
 
 For a gated stream, the customer's licence key goes in Joomla's **Extra Query**
