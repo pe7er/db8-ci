@@ -46,20 +46,53 @@ reusable workflow would need *Settings → Actions → General → Access* opene
 in `db8-ci` first. It holds no extension source, only build steps and setup
 notes.
 
-### 2. Create one update stream per package
+### 2. Provision the catalogue and derive the streams
 
-Run `streams.sql` against extensions.db8.nl, or add them by hand in
-**com_db8updates → Streams**:
+The site is built by two scripts in this repo, copied into the Joomla root's
+`cli/` directory and run from there:
 
-| Field | Value |
-|---|---|
-| Element | `pkg_db8access` (etc.) — must equal `<name>` in the package manifest |
-| Extension type | `package` |
-| Channel | `stable` |
-| Access mode | `public` |
+```bash
+cp db8-ci/*.php /path/to/joomla/cli/
+php cli/provision-downloads.php    # category, downloads, versions, files, checksums, streams
+php cli/provision-licensing.php    # customer group, whitelist, plan, test licence key
+php cli/create-update-menu.php     # /updates and /updates/<package>
+php cli/provision-site.php         # articles, menus, modules
+```
+
+All four are idempotent — re-run them after building new packages and only the
+changes are applied.
+
+`provision-downloads.php` populates **com_db8downloads** and then calls
+`DownloadsStreamSync::sync()`, which derives one com_db8updates stream per
+download and one version per download-version. Streams are never written by
+hand: com_db8updates ships no admin edit form for streams or versions
+(`StreamModel::getForm()` and `VersionModel::getForm()` both return `null`),
+because the downloads catalogue is meant to be the single source.
+
+| Field | Value | Comes from |
+|---|---|---|
+| Element | `pkg_db8access` (etc.) | the download's `element` — must equal `<name>` in the manifest |
+| Extension type | `package` | the download's `package_type` |
+| Channel | `stable` | hardcoded by `sync()` |
+| Access mode | `public` | hardcoded by `sync()` |
 
 The element match is exact and failure is silent: Joomla fetches the feed,
 finds no matching extension, and reports no update available.
+
+> `streams.sql` used to live here and has been **removed**. It wrote streams
+> with a NULL `download_id`, which is exactly `sync()`'s idempotency key, so
+> running both produced duplicate streams — and it created no version rows,
+> which cannot then be added through the UI.
+
+Two settings on the version rows are load-bearing and easy to get wrong:
+
+- **`joomla_min_version` must be `6`, not `6.0`.** The renderer turns a bare
+  minimum into `"$min.*"` and Joomla matches it with
+  `preg_match('/^' . $version . '/', JVERSION)`. `6.0` becomes `/^6.0.*/`, which
+  does not match `6.1.2` — the `0` fails against the `1` — so every customer is
+  silently told they are up to date. `6` becomes `/^6.*/` and matches.
+- **Do not set `joomla_max_version`.** A min and a max produce `6,7` → `/^6,7/`,
+  which matches nothing at all.
 
 **Access mode stays `public`, deliberately.** Gating belongs on the download,
 not the feed. A site whose licence has expired must still see that an update
@@ -178,20 +211,6 @@ installer looks. Keeping the repo identical to a working install is what lets
 > Uploads land on the site, not in the repo: `sync.sh --delete` never touches
 > `attachments/`, and ticket attachments are gitignored.
 
----|---|
-| `src/com_x/admin` | `administrator/components/com_x` |
-| `src/com_x/site` | `components/com_x` |
-| `src/com_x/media` | `media/com_x` |
-| `src/plg_<group>_<name>` | `plugins/<group>/<name>` |
-| `src/mod_x` | `administrator/modules/mod_x`, or `modules/` if the manifest says `client="site"` |
-
-Renaming a plugin's group means renaming its directory — `plg_db8payment_mollie`
-installs into `plugins/db8payment/mollie`.
-
-> Once a site is linked, Joomla writes uploads back into the repo. Ticket
-> attachments under `src/com_db8support/media/attachments/` are gitignored for
-> exactly this reason.
-
 ---
 
 ## Cutting a release
@@ -228,17 +247,31 @@ formatting, and rebuilding any tag reproduces the same package.
 
 ### 3. Publish on extensions.db8.nl
 
-Currently manual. From the GitHub release:
+Two ways, depending on whether you are adding a version or rebuilding one.
+
+**By script (preferred).** Bump the version in `db8-ci/packages.php`, put the
+new zip where the script can see it, and re-run:
+
+```bash
+php cli/provision-downloads.php --incoming=/path/to/zips
+```
+
+It creates the download version, places the file, computes the SHA-512,
+cross-checks it against the `.sha512` the build wrote, and syncs the stream
+version. Existing rows are left alone, so it is safe to re-run.
+
+**By hand.** From the GitHub release:
 
 1. Download `pkg_<name>-<version>.zip`.
 2. **com_db8downloads** — upload it as a new version of the package's download.
-3. **com_db8updates → Versions** — add a row on the package's stream:
-   - version — matches the tag
-   - download — link the com_db8downloads version (a literal URL is refused
-     for gated packages; see above)
-   - SHA512 — from the release notes
-   - Joomla/PHP minimums, changelog, release date
-4. Publish the version row.
+   Set `joomla_min_version` to `6` (see the warning above), flag it
+   **featured**, and publish it.
+3. **com_db8updates → Streams → Sync from downloads** — this creates the
+   matching stream version, linked by `download_id`, with no literal URL.
+
+Note the admin version form cannot set `release_date`, `joomla_min_version`,
+`php_min_version` or `changelog` — those fields are not in `version.xml`. Only
+the script (or SQL) can populate them, which is the main reason to prefer it.
 
 The feed picks it up immediately, subject to the `feed_cache_minutes` parameter
 in com_db8updates.
@@ -266,7 +299,8 @@ This is deliberate: customers install a package, so the package number is what
 they see and quote in support. Independent per-extension versions would mean
 nine numbers to reason about per release.
 
-All nine packages currently sit at **0.9.0**, unreleased.
+Eight packages sit at **0.9.0**; `db8setup` is at **0.9.1**. None are released
+publicly yet.
 
 ---
 
@@ -280,9 +314,23 @@ nothing; you need `git push origin <tag>`. Check the tag is three-part.
 → `pkg_db8access.xml` → `pkg_db8access-<version>.zip`.
 
 **Customer sees no update.** In order: is the version row published; does the
-stream element exactly equal the package `<name>`; does the customer's update
-site URL match the manifest; for gated streams, is `license_key=…` set in Extra
-Query; has `feed_cache_minutes` elapsed.
+stream element exactly equal the package `<name>`; is `joomla_min_version` a
+bare major (`6`, not `6.0`) with no maximum; does the customer's update site URL
+match the manifest; for gated streams, is `license_key=…` set in Extra Query;
+has `feed_cache_minutes` elapsed.
+
+A useful check is whether the update reached `#__updates` at all. If the row is
+there but `extension_id` is `0`, the feed was fetched and parsed fine and Joomla
+simply did not match it to anything installed — it filed it as a *new* extension
+rather than an update. That is a mismatch in one of element, type, folder or
+**client_id**.
+
+`client_id` is the subtle one. Joomla's `ExtensionAdapter` assumes
+`client_id = 1` (administrator) for every `<update>` unless the feed sends
+`<client>`, but packages, plugins, libraries and files all install with
+`client_id = 0`. `UpdateXmlRenderer::resolveClient()` emits the element for
+those types; if you add a stream type it does not cover, check this first. The
+failure is completely silent — the customer just sees "up to date".
 
 **Update found but download fails.** The download URL resolved to something the
 customer can't fetch — usually a GitHub asset on a private repo. It must resolve
