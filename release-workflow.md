@@ -74,7 +74,13 @@ checks published state, view level, user groups and the licence token, and
 
 > For that to work, version rows must set `download_id` linking a
 > com_db8downloads version. `UpdateXmlRenderer::resolveDownloadUrl()` prefers a
-> literal `download_url`, and a literal URL is **not** access-checked.
+> literal `download_url`, and a literal URL is **not** access-checked — the feed
+> is public, so publishing one would hand the package to anyone.
+>
+> `VersionTable::check()` enforces this: a version with a literal
+> `download_url` and no `download_id` cannot be published while com_db8downloads
+> is installed. Turn off **Require gated downloads** in the component options
+> only for packages that really are free.
 
 ### 3. Create the /updates menu items
 
@@ -228,7 +234,8 @@ Currently manual. From the GitHub release:
 2. **com_db8downloads** — upload it as a new version of the package's download.
 3. **com_db8updates → Versions** — add a row on the package's stream:
    - version — matches the tag
-   - download — link the com_db8downloads version, or paste a literal URL
+   - download — link the com_db8downloads version (a literal URL is refused
+     for gated packages; see above)
    - SHA512 — from the release notes
    - Joomla/PHP minimums, changelog, release date
 4. Publish the version row.
