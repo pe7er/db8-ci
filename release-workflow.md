@@ -125,21 +125,54 @@ channel behaves the same as a gated download.
 
 ## Day-to-day development
 
-Work in the repo, not in the Joomla install. Link once per site:
+Work in the repo, not in the Joomla install. Install once so Joomla registers
+the extensions and runs their SQL:
 
 ```bash
-./scripts/install-and-link.sh /path/to/joomla
+./scripts/install.sh /path/to/joomla
 ```
 
-That builds the package, installs it (so `#__extensions` rows and SQL
-migrations run), deletes the installed folders, and symlinks `src/**` in their
-place. From then on edits in `src/` are immediately live.
+After that, push code changes to the site with:
 
-`link.sh`, `unlink.sh` and `install-and-link.sh` all handle components,
-plugins and modules. Directory names encode the mapping:
+```bash
+./scripts/sync.sh /path/to/joomla              # one way, repo -> site
+./scripts/sync.sh /path/to/joomla --dry-run    # preview
+./scripts/sync.sh /path/to/joomla --delete     # also remove files dropped from src/
+```
 
-| Repo directory | Installs to |
+Re-run `install.sh` only when a manifest changes, an extension is added, or a
+schema update needs to run. `sync.sh` never touches the database and never
+copies anything back from the site.
+
+**Do not symlink extensions into a Joomla site.** `Folder::folders()` in
+`joomla/filesystem` skips symlinked directories, so a symlinked extension is
+never enumerated when `administrator/cache/autoload_psr4.php` is rebuilt. Its
+namespace disappears from the map and every class in it stops autoloading —
+which surfaces as unrelated "class not found" errors elsewhere, because the
+map is shared. Real directories are the only layout Joomla enumerates.
+
+Directory names encode where each extension belongs:
+
+| Repo directory | Copies to |
 |---|---|
+| `src/com_x/admin` | `administrator/components/com_x` |
+| `src/com_x/site` | `components/com_x` |
+| `src/com_x/media` | `media/com_x` |
+| `src/plg_<group>_<name>` | `plugins/<group>/<name>` |
+| `src/mod_x` | `administrator/modules/mod_x`, or `modules/` if the manifest says `client="site"` |
+
+Renaming a plugin's group means renaming its directory — `plg_db8payment_mollie`
+installs into `plugins/db8payment/mollie`.
+
+Component manifests and `script.php` live inside `admin/`, matching the
+installed layout. The build copies them to the package root, which is where the
+installer looks. Keeping the repo identical to a working install is what lets
+`sync.sh` be a plain copy.
+
+> Uploads land on the site, not in the repo: `sync.sh --delete` never touches
+> `attachments/`, and ticket attachments are gitignored.
+
+---|---|
 | `src/com_x/admin` | `administrator/components/com_x` |
 | `src/com_x/site` | `components/com_x` |
 | `src/com_x/media` | `media/com_x` |
