@@ -116,10 +116,10 @@ The customer's licence key goes in Joomla's **Extra Query** field
 request and the download URL. Never put a key in the manifest — it ships to
 everyone.
 
-Either name works: `DownloadController` reads `token` and falls back to
-`license_key`, so whichever the customer puts in Extra Query reaches the
-download. The update feed reads `license_key`, so prefer `license_key=XYZ` if
-you ever gate a channel.
+Either name works, at both ends: the feed reads `license_key` and falls back to
+`token`, com_db8downloads reads `token` and falls back to `license_key`. So
+`token=XYZ` and `license_key=XYZ` are equivalent in Extra Query, and a gated
+channel behaves the same as a gated download.
 
 ---
 
