@@ -116,10 +116,10 @@ The customer's licence key goes in Joomla's **Extra Query** field
 request and the download URL. Never put a key in the manifest — it ships to
 everyone.
 
-> The two endpoints currently disagree on the parameter name: the feed reads
-> `license_key`, but com_db8downloads reads `token`. Since streams are public,
-> only the download needs it, so set Extra Query to `token=XYZ`. Accepting both
-> names in `DownloadController` would remove the trap.
+Either name works: `DownloadController` reads `token` and falls back to
+`license_key`, so whichever the customer puts in Extra Query reaches the
+download. The update feed reads `license_key`, so prefer `license_key=XYZ` if
+you ever gate a channel.
 
 ---
 
