@@ -1,0 +1,93 @@
+name: Build and release a db8 package
+
+# Reusable workflow shared by every db8 package repo. Callers do:
+#
+#   jobs:
+#     release:
+#       uses: pe7er/db8-ci/.github/workflows/release.yml@main
+#       permissions:
+#         contents: write
+#       secrets: inherit
+#
+# The caller is triggered by a version tag; this workflow takes the version
+# from that tag and never writes back to the repository.
+
+on:
+  workflow_call:
+    inputs:
+      php-version:
+        description: PHP used to resolve composer dependencies
+        type: string
+        default: '8.3'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from the tag
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag '$VERSION' is not a three-part version"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Read package identity from .env
+        run: grep -E '^(PACKAGE_NAME|MANIFEST)=' .env >> "$GITHUB_ENV"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+          tools: composer
+
+      - name: Build package
+        run: |
+          chmod +x build/build.sh
+          ./build/build.sh
+        env:
+          VERSION: ${{ env.VERSION }}
+
+      - name: Locate artefacts
+        run: |
+          ZIP="dist/pkg_${PACKAGE_NAME}-${VERSION}.zip"
+          if [ ! -f "$ZIP" ]; then
+            echo "::error::expected $ZIP but the build did not produce it"
+            ls -la dist || true
+            exit 1
+          fi
+          echo "PKG_ZIP=$ZIP" >> "$GITHUB_ENV"
+          echo "SHA512=$(sha512sum "$ZIP" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Compose release notes
+        run: |
+          {
+            echo "### Publish on extensions.db8.nl"
+            echo
+            echo "1. Download \`$(basename "$PKG_ZIP")\` below."
+            echo "2. Upload it to **com_db8downloads** as a new version of \`pkg_${PACKAGE_NAME}\`."
+            echo "3. In **com_db8updates**, add a version row on stream \`pkg_${PACKAGE_NAME}\`:"
+            echo "   version \`${VERSION}\`, and the SHA512 below."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Version | \`${VERSION}\` |"
+            echo "| SHA512 | \`${SHA512}\` |"
+          } > release-notes.md
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ env.PACKAGE_NAME }} ${{ env.VERSION }}
+          body_path: release-notes.md
+          files: |
+            ${{ env.PKG_ZIP }}
+            ${{ env.PKG_ZIP }}.sha512

@@ -1,0 +1,215 @@
+# Releasing db8 extension packages
+
+How a change in `src/` becomes an update offered inside a customer's Joomla
+back-end.
+
+## The moving parts
+
+| Where | What it holds |
+|---|---|
+| `pe7er/db8<name>` (×9, private) | extension sources, package manifest, build script |
+| `pe7er/db8-ci` | the release workflow all nine repos call |
+| GitHub release | build artefact: the package zip and its SHA512 |
+| extensions.db8.nl → com_db8downloads | the file customers actually download |
+| extensions.db8.nl → com_db8updates | the update feed Joomla polls |
+
+GitHub stores source and builds packages. It does **not** serve customers: the
+repos are private, so `raw.githubusercontent.com` and release assets both return
+404 to an unauthenticated Joomla site. Everything customer-facing is served by
+extensions.db8.nl.
+
+## The nine packages
+
+`db8access` · `db8downloads` · `db8invoices` · `db8licenses` · `db8payment` ·
+`db8setup` · `db8support` · `db8tickets` · `db8updates`
+
+Each is one repo, one package, one update stream. A package may contain several
+extensions — `db8payment` ships a component and eight plugins.
+
+---
+
+## One-time setup
+
+### 1. Create the repositories
+
+Nine package repos plus `db8-ci`, all private except as noted:
+
+```bash
+cd combined-to-commit-to-git-repos/db8access
+git init && git add -A && git commit -m "Import from live"
+gh repo create pe7er/db8access --private --source=. --push
+```
+
+`db8-ci` must be **readable by the package repos**. Within one account a private
+reusable workflow works if you enable it under
+*Settings → Actions → General → Access* in the `db8-ci` repo. If that proves
+awkward, making `db8-ci` public is harmless — it contains no source, only build
+steps.
+
+### 2. Create one update stream per package
+
+In **com_db8updates → Streams** on extensions.db8.nl, add a stream per package:
+
+| Field | Value |
+|---|---|
+| Element | `pkg_db8access` (etc.) |
+| Extension type | `package` |
+| Channel | `stable` |
+| Access mode | `public`, `license_key`, `subscription`, or `user_group` |
+
+The element must match `<name>` in the package manifest exactly, or Joomla will
+fetch the feed and ignore it.
+
+### 3. Point customer sites at the feed
+
+The manifest already carries the update server, so a fresh install wires itself
+up:
+
+```xml
+<server type="extension" name="pkg_db8access">https://extensions.db8.nl/index.php?option=com_db8updates&amp;task=update.xml&amp;stream=pkg_db8access&amp;channel=stable</server>
+```
+
+For a gated stream, the customer's licence key goes in Joomla's **Extra Query**
+field (*System → Update Sites → edit the site*), as `license_key=XYZ`. Joomla
+appends it to both the feed request and the download URL. Never put a key in the
+manifest — it ships to everyone.
+
+---
+
+## Day-to-day development
+
+Work in the repo, not in the Joomla install. Link once per site:
+
+```bash
+./scripts/install-and-link.sh /path/to/joomla
+```
+
+That builds the package, installs it (so `#__extensions` rows and SQL
+migrations run), deletes the installed folders, and symlinks `src/**` in their
+place. From then on edits in `src/` are immediately live.
+
+`link.sh`, `unlink.sh` and `install-and-link.sh` all handle components,
+plugins and modules. Directory names encode the mapping:
+
+| Repo directory | Installs to |
+|---|---|
+| `src/com_x/admin` | `administrator/components/com_x` |
+| `src/com_x/site` | `components/com_x` |
+| `src/com_x/media` | `media/com_x` |
+| `src/plg_<group>_<name>` | `plugins/<group>/<name>` |
+| `src/mod_x` | `administrator/modules/mod_x`, or `modules/` if the manifest says `client="site"` |
+
+Renaming a plugin's group means renaming its directory — `plg_db8payment_mollie`
+installs into `plugins/db8payment/mollie`.
+
+> Once a site is linked, Joomla writes uploads back into the repo. Ticket
+> attachments under `src/com_db8support/media/attachments/` are gitignored for
+> exactly this reason.
+
+---
+
+## Cutting a release
+
+### 1. Tag
+
+```bash
+git tag 0.9.1
+git push origin 0.9.1
+```
+
+That is the whole trigger. **The tag is the version** — the single source of
+truth. Nothing else needs bumping, and CI commits nothing back, so your clone
+never goes stale after a release.
+
+Tags must be three-part (`1.2.3`); the workflow rejects anything else. `VERSION`
+in `.env` is only the default for local builds and CI ignores it.
+
+### 2. What CI does
+
+`.github/workflows/release.yml` in the package repo calls the shared workflow in
+`db8-ci`, which:
+
+1. checks out the tag,
+2. stamps `<version>` and `<creationDate>` into a **staging copy** of every
+   manifest,
+3. resolves composer dependencies into that staging copy,
+4. zips each `src/*` extension, bundles them into `pkg_<name>-<version>.zip`,
+5. computes the SHA512,
+6. creates a GitHub release with the zip, the checksum, and instructions.
+
+Stamping never touches `src/`. Manifests in git keep their comments and
+formatting, and rebuilding any tag reproduces the same package.
+
+### 3. Publish on extensions.db8.nl
+
+Currently manual. From the GitHub release:
+
+1. Download `pkg_<name>-<version>.zip`.
+2. **com_db8downloads** — upload it as a new version of the package's download.
+3. **com_db8updates → Versions** — add a row on the package's stream:
+   - version — matches the tag
+   - download — link the com_db8downloads version, or paste a literal URL
+   - SHA512 — from the release notes
+   - Joomla/PHP minimums, changelog, release date
+4. Publish the version row.
+
+The feed picks it up immediately, subject to the `feed_cache_minutes` parameter
+in com_db8updates.
+
+`UpdateXmlRenderer::resolveDownloadUrl()` prefers a literal `download_url` and
+otherwise routes through com_db8downloads, which is what enforces licence and
+subscription gating. Prefer linking a download over pasting a URL: a literal URL
+is not access-checked.
+
+### 4. Verify
+
+On a test site: **System → Extensions: Update → Find Updates**. The new version
+should appear and install. Check with a gated stream and no licence key too —
+the feed must return nothing rather than the download URL.
+
+---
+
+## Version rules
+
+One version per package, shared by every extension inside it — the build stamps
+them all from the tag. `plg_console_db8setup` therefore carries the same number
+as `com_db8setup`.
+
+This is deliberate: customers install a package, so the package number is what
+they see and quote in support. Independent per-extension versions would mean
+nine numbers to reason about per release.
+
+All nine packages currently sit at **0.9.0**, unreleased.
+
+---
+
+## Troubleshooting
+
+**Workflow doesn't run.** It triggers on tags only. `git push` alone does
+nothing; you need `git push origin <tag>`. Check the tag is three-part.
+
+**"expected dist/pkg_… but the build did not produce it".** `PACKAGE_NAME` in
+`.env` disagrees with the manifest filename. They must match: `PACKAGE_NAME=db8access`
+→ `pkg_db8access.xml` → `pkg_db8access-<version>.zip`.
+
+**Customer sees no update.** In order: is the version row published; does the
+stream element exactly equal the package `<name>`; does the customer's update
+site URL match the manifest; for gated streams, is `license_key=…` set in Extra
+Query; has `feed_cache_minutes` elapsed.
+
+**Update found but download fails.** The download URL resolved to something the
+customer can't fetch — usually a GitHub asset on a private repo. It must resolve
+to extensions.db8.nl.
+
+**A plugin installs into the wrong group.** The directory name is the source of
+truth: `src/plg_<group>_<name>`. Rename the directory, and update the `group`
+attribute in the package manifest.
+
+---
+
+## Possible next step
+
+Step 3 is the only manual part. com_db8updates and com_db8downloads both already
+hold the data a release needs, so a small authenticated endpoint accepting the
+zip, version and SHA512 would let the workflow publish directly and reduce a
+release to pushing a tag. Worth doing once the release cadence justifies it.
