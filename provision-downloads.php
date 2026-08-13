@@ -250,6 +250,19 @@ foreach ($packages as $pkg) {
 
     db8_store($version, $pkg['element'] . ' version file');
 
+    // Exactly one featured version per download. "Featured" means the current
+    // release: the site renders the download button only for it, and
+    // DownloadController::loadFeaturedVersion() takes the first it finds.
+    // Publishing a new version has to demote the previous one, or an older
+    // release keeps competing to be the one offered.
+    $db->setQuery(
+        $db->getQuery(true)
+            ->update($db->quoteName('#__db8downloads_versions'))
+            ->set($db->quoteName('featured') . ' = 0')
+            ->where($db->quoteName('download_id') . ' = ' . $downloadId)
+            ->where($db->quoteName('id') . ' <> ' . $versionId)
+    )->execute();
+
     \printf(
         "  %-18s d%-3d v%-3d %-9s %9s bytes  sha512 %s…\n",
         $pkg['element'],

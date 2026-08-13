@@ -121,7 +121,7 @@ HTML,
         'element'   => 'pkg_db8updates',
         'title'     => 'db8 Updates',
         'alias'     => 'db8-updates',
-        'version'   => '0.9.0',
+        'version'   => '0.9.1',
         'ordering'  => 3,
         'introtext' => 'Update server for Joomla extensions: streams, versions and access-gated update feeds.',
         'fulltext'  => <<<'HTML'
@@ -155,7 +155,21 @@ not.</p>
 <p>Requires <strong>db8 Downloads</strong> to serve the files, and pairs with
 <strong>db8 Licenses</strong> to decide who may fetch them.</p>
 HTML,
-        'changelog' => '<ul><li>First packaged release.</li></ul>',
+        'changelog' => <<<'HTML'
+<p>First release.</p>
+<ul>
+    <li><strong>Updates now reach the sites subscribed to a feed.</strong>
+        Joomla assumes an update applies to the administrator client unless the
+        feed says otherwise, so packages, plugins, libraries and files never
+        matched an installed extension and every site was told it was up to
+        date. The feed now sends <code>&lt;client&gt;</code>.</li>
+    <li>The feed is valid Joomla update XML, rooted on
+        <code>&lt;updates&gt;</code>.</li>
+    <li>Download URLs are no longer double-escaped.</li>
+    <li>Releases publish a SHA-512 checksum, which Joomla verifies before
+        installing.</li>
+</ul>
+HTML,
     ],
     [
         'repo'      => 'db8licenses',
