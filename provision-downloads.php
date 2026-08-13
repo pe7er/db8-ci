@@ -59,6 +59,29 @@ $storage->ensureBaseExists();
 
 db8_say('storage base: ' . $storage->getBasePath());
 
+// Check every zip up front. Failing halfway leaves the catalogue half-updated,
+// which is worse than not starting: the earlier packages are already published
+// at their new versions while the later ones are not.
+$missing = [];
+
+foreach ($packages as $pkg) {
+    $zip = $incoming . '/pkg_' . $pkg['repo'] . '-' . $pkg['version'] . '.zip';
+
+    if (!\is_file($zip)) {
+        $missing[] = \basename($zip);
+    }
+}
+
+if ($missing) {
+    echo "Missing " . \count($missing) . " package(s) in {$incoming}:\n";
+
+    foreach ($missing as $m) {
+        echo "  {$m}\n";
+    }
+
+    exit("Build them, or pass --incoming= pointing at where they are.\n");
+}
+
 // --- category --------------------------------------------------------------
 
 $catId = (int) $db->setQuery(
