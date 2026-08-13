@@ -404,7 +404,11 @@ if ($homeId) {
     $home->title        = 'Home';
     $home->link         = 'index.php?option=com_content&view=article&id=' . $homeArticleId;
     $home->component_id = db8_component_id($db, 'com_content');
-    $home->params       = json_encode(['show_page_heading' => 0]);
+    $home->params       = json_encode([
+        'show_page_heading'     => 0,
+        'menu-meta_description' => 'Commercial Joomla extensions by db8: downloads, licensing and updates, '
+            . 'subscriptions and payments, support and event ticketing.',
+    ]);
 
     db8_store($home, 'home menu item');
 
@@ -417,6 +421,7 @@ $items = [
     [
         'title'        => 'Extensions',
         'alias'        => 'extensions',
+        'params'       => json_encode(['menu-meta_description' => 'Every db8 Joomla extension, with its current version, checksum and changelog.']),
         'path'         => 'extensions',
         'link'         => 'index.php?option=com_db8downloads&view=category&id=' . $catId,
         'component_id' => db8_component_id($db, 'com_db8downloads'),
@@ -425,6 +430,7 @@ $items = [
     [
         'title'        => 'Pricing',
         'alias'        => 'pricing',
+        'params'       => json_encode(['menu-meta_description' => 'Subscription plans for the db8 Joomla extensions, including updates and support.']),
         'path'         => 'pricing',
         'link'         => 'index.php?option=com_db8access&view=plans',
         'component_id' => db8_component_id($db, 'com_db8access'),
@@ -433,6 +439,7 @@ $items = [
     [
         'title'        => 'Documentation',
         'alias'        => 'documentation',
+        'params'       => json_encode(['menu-meta_description' => 'Requirements, installation order, and how the db8 update server and licence keys work.']),
         'path'         => 'documentation',
         'link'         => 'index.php?option=com_content&view=category&layout=blog&id=' . $docsCat,
         'component_id' => db8_component_id($db, 'com_content'),
@@ -441,6 +448,7 @@ $items = [
     [
         'title'        => 'Support',
         'alias'        => 'support',
+        'params'       => json_encode(['menu-meta_description' => 'Ask a question or report a problem with a db8 Joomla extension.']),
         'path'         => 'support',
         'link'         => 'index.php?option=com_db8support&view=form',
         'component_id' => db8_component_id($db, 'com_db8support'),
