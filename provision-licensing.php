@@ -301,7 +301,6 @@ if ($existingKey) {
         'source_component' => 'com_db8access',
         'source_id'        => $planId,
         'label'            => 'db8 All Access (test)',
-        'activation_limit' => 5,
         'expires'          => $periodEnd,
     ]);
 

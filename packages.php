@@ -189,11 +189,11 @@ tell a paying customer from a passer-by.</p>
     <li><strong>Licences</strong> — issue keys against a customer, with a status
         and an optional expiry date.</li>
     <li><strong>Minting</strong> — generate keys in bulk.</li>
-    <li><strong>Activations</strong> — record where a key is in use.</li>
     <li><strong>Validation</strong> — a single service the other db8 components
         call, so the rules live in one place.</li>
-    <li><strong>Customer view</strong> — a front-end page where customers find
-        their own keys.</li>
+    <li><strong>Download codes</strong> — customers create their own download
+        codes and give each one a label, for example the website that uses it.
+        You set how many codes a customer may create.</li>
 </ul>
 
 <h3>How customers use a key</h3>
