@@ -277,7 +277,7 @@ HTML,
         'fulltext'  => <<<'HTML'
 <p>db8 Payment adds online payments to the db8 extensions. Customers pay with
 iDEAL, credit card, PayPal or bank transfer, and EU VAT numbers are checked
-when a customer buys a subscription. All payments are listed in one overview. db8 Access and db8
+when a customer buys a subscription or a ticket for an online event. All payments are listed in one overview. db8 Access and db8
 Tickets need it. It is for site owners who want to sell on their Joomla site
 without a separate webshop.</p>
 
