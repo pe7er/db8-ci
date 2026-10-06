@@ -33,20 +33,21 @@ return [
         'alias'     => 'db8-setup',
         'version'   => '0.9.1',
         'ordering'  => 1,
-        'introtext' => 'Guided setup for the db8 extension family: presets, provisioning and health checks, plus the db8 administrator menu branch and its dashboard.',
+        'introtext' => 'db8 Setup installs and configures the other db8 extensions for you.',
         'fulltext'  => <<<'HTML'
-<p>db8 Setup is the starting point for the db8 family. It gathers every db8
-component under a single administrator menu branch, adds a dashboard that shows
-what is installed and how it is configured, and provides guided provisioning so
-a new site can be brought up without clicking through eight components in
-turn.</p>
+<p>db8 Setup installs and configures the other db8 extensions for you. It puts
+all db8 components in one administrator menu, checks if your site is configured
+correctly, and creates the categories, user group and access level you need.
+This saves time
+and prevents configuration mistakes. It is for site builders who use one or more
+db8 extensions on a Joomla site.</p>
 
 <h3>What it does</h3>
 <ul>
     <li><strong>Presets</strong> — apply a known-good configuration across the
         installed db8 components instead of setting each option by hand.</li>
-    <li><strong>Provisioning</strong> — create the categories, menu items and
-        user groups a working setup needs.</li>
+    <li><strong>Provisioning</strong> — create the categories, user group and
+        access level a working setup needs.</li>
     <li><strong>Health checks</strong> — verify that storage paths are writable
         and protected, that dependent components are installed and enabled, and
         that licence and download configuration is consistent.</li>
@@ -79,12 +80,13 @@ HTML,
         'alias'     => 'db8-downloads',
         'version'   => '0.9.0',
         'ordering'  => 2,
-        'introtext' => 'Gated file downloads for Joomla, with versions, categories and Smart Search integration.',
+        'introtext' => 'db8 Downloads lets you offer files on your Joomla site and decide who can download them.',
         'fulltext'  => <<<'HTML'
-<p>db8 Downloads serves files that not everyone should have. Uploads are stored
-outside the web root, so nothing is fetchable by guessing a URL: every request
-goes through PHP, which decides whether the visitor is entitled to the file
-before a single byte is sent.</p>
+<p>db8 Downloads lets you offer files on your Joomla site and decide who can
+download them. Files are stored in a protected folder, so nobody can download
+them with a direct link. You give access by access level and user group,
+and licence keys through db8 Access. Every download is logged.
+It is for developers, publishers and organisations that share files with customers or members.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -94,8 +96,9 @@ before a single byte is sent.</p>
     <li><strong>Checksums</strong> — SHA-256, SHA-384 or SHA-512 computed on
         upload and shown alongside the file, so anyone can verify what they
         downloaded.</li>
-    <li><strong>Access control</strong> — Joomla view levels, user group
-        whitelists, and licence keys validated through db8 Licenses.</li>
+    <li><strong>Access control</strong> — a Joomla access level and a list of
+        allowed user groups. A licence key gives access when its owner is in
+        one of those groups through db8 Access.</li>
     <li><strong>Audit log</strong> — every delivery and every refusal is
         recorded with the reason, the user and the address.</li>
     <li><strong>Smart Search</strong> — a finder plugin, so downloads appear in
@@ -123,12 +126,13 @@ HTML,
         'alias'     => 'db8-updates',
         'version'   => '0.9.1',
         'ordering'  => 3,
-        'introtext' => 'Update server for Joomla extensions: streams, versions and access-gated update feeds.',
+        'introtext' => 'db8 Updates turns your Joomla site into an update server for your own extensions.',
         'fulltext'  => <<<'HTML'
-<p>db8 Updates turns your site into an update server for the extensions you
-publish. Your customers' Joomla installations poll it the same way they poll
-any other update site, and see your releases in the ordinary
-<em>Extensions: Update</em> screen.</p>
+<p>db8 Updates turns your Joomla site into an update server for your own
+extensions. Your customers see new versions in the normal Joomla update screen
+and install them with one click. With db8 Licenses, only customers with a valid
+licence can download the update. It is for developers who sell or distribute
+Joomla extensions.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -151,6 +155,11 @@ whose licence has lapsed still <em>sees</em> that an update exists — otherwise
 they would never learn about a security release — but cannot download it. A
 hidden feed would do the opposite and report "up to date" to someone who is
 not.</p>
+
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8updates</code> — the component.</li>
+</ul>
 
 <p>Requires <strong>db8 Downloads</strong> to serve the files, and pairs with
 <strong>db8 Licenses</strong> to decide who may fetch them.</p>
@@ -178,11 +187,13 @@ HTML,
         'alias'     => 'db8-licenses',
         'version'   => '0.9.0',
         'ordering'  => 4,
-        'introtext' => 'Licence key issuing and validation for commercial Joomla extensions.',
+        'introtext' => 'db8 Licenses creates licence keys for your customers and checks them when a customer downloads a file or an update.',
         'fulltext'  => <<<'HTML'
-<p>db8 Licenses issues the keys that identify your customers and validates them
-when something is requested. It is the piece that lets the rest of the family
-tell a paying customer from a passer-by.</p>
+<p>db8 Licenses creates licence keys for your customers and checks them when a
+customer downloads a file or an update. You see which keys are active and when they
+expire. This way, only paying customers get your files.
+It is for developers and companies that sell software or other digital products
+with Joomla.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -202,6 +213,11 @@ Joomla installation. Joomla appends it to both the feed request and the download
 request, so one value covers both. It is never placed in the package manifest,
 which ships identically to everyone.</p>
 
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8licenses</code> — the component.</li>
+</ul>
+
 <p>Used by <strong>db8 Downloads</strong> and <strong>db8 Updates</strong>.
 Expired keys still see updates; they are refused the file.</p>
 HTML,
@@ -214,11 +230,13 @@ HTML,
         'alias'     => 'db8-access',
         'version'   => '0.9.0',
         'ordering'  => 5,
-        'introtext' => 'Subscriptions and access control for Joomla: plans, subscriptions, customers, and the plugins that enforce them.',
+        'introtext' => 'db8 Access lets you sell subscriptions on your Joomla site.',
         'fulltext'  => <<<'HTML'
-<p>db8 Access sells and enforces recurring access. It defines what is on offer,
-tracks who currently holds it, and moves people in and out of Joomla user groups
-as their subscription starts, renews or lapses.</p>
+<p>db8 Access lets you sell subscriptions on your Joomla site. When a customer
+pays, they automatically get access to the content of their plan. When the
+subscription ends, the access ends too. You never add or remove users by hand.
+It is for membership sites, online courses, publishers and software
+developers.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -255,11 +273,13 @@ HTML,
         'alias'     => 'db8-payment',
         'version'   => '0.9.0',
         'ordering'  => 6,
-        'introtext' => 'Payment processing for Joomla with Mollie, Stripe, PayPal and bank transfer, plus EU VAT validation.',
+        'introtext' => 'db8 Payment adds online payments to the db8 extensions.',
         'fulltext'  => <<<'HTML'
-<p>db8 Payment is the payment layer the rest of the family builds on. It
-provides the checkout events, the transaction record and the gateway plugins, so
-that db8 Access and db8 Tickets do not each implement payment separately.</p>
+<p>db8 Payment adds online payments to the db8 extensions. Customers pay with
+iDEAL, credit card, PayPal or bank transfer, and EU VAT numbers are checked
+when a customer buys a subscription. All payments are listed in one overview. db8 Access and db8
+Tickets need it. It is for site owners who want to sell on their Joomla site
+without a separate webshop.</p>
 
 <h3>Gateways included</h3>
 <ul>
@@ -281,8 +301,27 @@ that db8 Access and db8 Tickets do not each implement payment separately.</p>
     <li><strong>EU VAT validation</strong> — a tax plugin that checks VAT
         identification numbers, so cross-border business sales can be handled
         correctly.</li>
-    <li><strong>Recorder and invoices bridges</strong> — hand a completed
-        payment on to the component that asked for it, and to db8 Invoices.</li>
+    <li><strong>Recorder</strong> — routes a gateway's payment confirmation to
+        the component that started the checkout, so payments confirmed later
+        by webhook are recorded too.</li>
+    <li><strong>Invoices bridge</strong> — hands completed payments to
+        db8 Invoices.</li>
+</ul>
+
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8payment</code> — the component: transactions, customers
+        and countries.</li>
+    <li><code>plg_db8payment_mollie</code>, <code>plg_db8payment_stripe</code>,
+        <code>plg_db8payment_paypal</code>,
+        <code>plg_db8payment_banktransfer</code> — the payment gateways.</li>
+    <li><code>plg_db8payment_payment_dummy</code> — the test gateway.</li>
+    <li><code>plg_db8payment_recorder</code> — routes a gateway's payment
+        confirmation to the component that started the checkout.</li>
+    <li><code>plg_db8payment_invoices</code> — hands completed payments to
+        db8 Invoices.</li>
+    <li><code>plg_db8tax_vatcheck</code> — EU VAT number validation through
+        VIES.</li>
 </ul>
 
 <p>Install this before <strong>db8 Access</strong> or
@@ -297,11 +336,13 @@ HTML,
         'alias'     => 'db8-invoices',
         'version'   => '0.9.0',
         'ordering'  => 7,
-        'introtext' => 'Invoice generation and PDF rendering for the db8 extension family.',
+        'introtext' => 'db8 Invoices creates a PDF invoice automatically after each payment.',
         'fulltext'  => <<<'HTML'
-<p>db8 Invoices produces the billing document that follows a payment. It listens
-for completed transactions from db8 Payment and renders an invoice as a PDF,
-with the numbering, customer details and VAT treatment already filled in.</p>
+<p>db8 Invoices creates a PDF invoice automatically after each payment. Every
+invoice gets the next invoice number, the customer details and the correct VAT,
+including reverse charge for EU business customers who buy a subscription. You do not have to make
+invoices by hand. It is for companies and organisations in the EU that sell with
+db8 Access or db8 Tickets.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -311,8 +352,18 @@ with the numbering, customer details and VAT treatment already filled in.</p>
         no external service is called and nothing leaves the site.</li>
     <li><strong>Sequential numbering</strong> — as bookkeeping requires.</li>
     <li><strong>VAT handling</strong> — including the reverse-charge case for
-        validated cross-border business customers.</li>
+        validated cross-border business customers who buy a
+        subscription.</li>
 </ul>
+
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8invoices</code> — the component, including the bundled
+        PDF renderer.</li>
+</ul>
+
+<p>Invoices are created by the <code>plg_db8payment_invoices</code> plugin,
+which ships with <strong>db8 Payment</strong>.</p>
 
 <p>Works with <strong>db8 Payment</strong> and <strong>db8 Access</strong>.</p>
 HTML,
@@ -325,11 +376,12 @@ HTML,
         'alias'     => 'db8-support',
         'version'   => '0.9.0',
         'ordering'  => 8,
-        'introtext' => 'Support ticket system for Joomla, with categories and attachments.',
+        'introtext' => 'db8 Support adds a help desk to your Joomla site.',
         'fulltext'  => <<<'HTML'
-<p>db8 Support is a help desk that lives inside Joomla, so support conversations
-sit next to the customer and licence records they relate to instead of in a
-separate system.</p>
+<p>db8 Support adds a help desk to your Joomla site. Customers send their
+questions as tickets, with screenshots or PDF files, and you answer them in the
+Joomla administrator, so you do not need a separate support system. It is for companies that
+support customers or members.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -337,12 +389,17 @@ separate system.</p>
         the administrator, with the full thread in one place.</li>
     <li><strong>Categories</strong> — route questions by product or topic using
         standard Joomla categories.</li>
-    <li><strong>Attachments</strong> — customers can attach the screenshot or
-        log that explains the problem.</li>
+    <li><strong>Attachments</strong> — customers can attach a screenshot, PDF
+        or text file that explains the problem.</li>
     <li><strong>Customer view</strong> — a front-end list where a customer sees
         their own tickets and nothing else.</li>
     <li><strong>Email</strong> — notifications through Joomla's own mail
         configuration.</li>
+</ul>
+
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8support</code> — the component.</li>
 </ul>
 
 <p>Stands on its own. Combined with <strong>db8 Access</strong> it can be
@@ -357,10 +414,12 @@ HTML,
         'alias'     => 'db8-tickets',
         'version'   => '0.9.0',
         'ordering'  => 9,
-        'introtext' => 'Event ticketing for Joomla: events, orders and check-in.',
+        'introtext' => 'db8 Tickets lets you sell tickets for events on your Joomla site.',
         'fulltext'  => <<<'HTML'
-<p>db8 Tickets sells admission to events and gets people through the door on the
-day. Events, ticket types, orders and check-in are all handled inside Joomla.</p>
+<p>db8 Tickets lets you sell tickets for events on your Joomla site. You create
+events with different ticket types and prices. Customers buy their tickets and show the QR
+code on their phone at the event, where you check them in. Each ticket works only once. It is
+for organisers of workshops, conferences, courses and other events.</p>
 
 <h3>What it does</h3>
 <ul>
@@ -374,6 +433,11 @@ day. Events, ticket types, orders and check-in are all handled inside Joomla.</p
         attendees on the day, so a ticket cannot be used twice.</li>
     <li><strong>Front end</strong> — event listing, event page, checkout, and a
         page where a buyer retrieves their tickets.</li>
+</ul>
+
+<h3>What is in the package</h3>
+<ul>
+    <li><code>com_db8tickets</code> — the component.</li>
 </ul>
 
 <p><strong>Requires db8 Payment</strong> for checkout. Pairs with
